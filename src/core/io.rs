@@ -6,7 +6,7 @@ use crypto::digest::Digest;
 use crypto::sha1::Sha1;
 use libflate::zlib::{Decoder, Encoder};
 
-use crate::exit_process;
+use crate::exit_process_with_error;
 
 pub fn generate_hash(source: &[u8]) -> String {
     let mut hasher = Sha1::new();
@@ -17,32 +17,32 @@ pub fn generate_hash(source: &[u8]) -> String {
 
 pub fn compress_by_zlib(source: &[u8]) -> Vec<u8> {
     let mut encoder = Encoder::new(Vec::new())
-        .unwrap_or_else(|e| exit_process!(1, "Failed to make new encoder instance: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to make new encoder instance: {}", e));
     encoder
         .write_all(source)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to write source data: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to write source data: {}", e));
     encoder
         .finish()
         .into_result()
-        .unwrap_or_else(|e| exit_process!(1, "Failed to encode: {}", e))
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to encode: {}", e))
 }
 
 pub fn decompress_by_zlib(source: &[u8]) -> Vec<u8> {
     let mut decoder = Decoder::new(source)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to make new decoder instance: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to make new decoder instance: {}", e));
     let mut buffer = Vec::new();
     decoder
         .read_to_end(&mut buffer)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to decode: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to decode: {}", e));
     buffer
 }
 
 pub fn create_file(path: &PathBuf, body: &[u8]) {
     let mut file =
-        fs::File::create(path).unwrap_or_else(|e| exit_process!(1, "Failed to create file: {}", e));
+        fs::File::create(path).unwrap_or_else(|e| exit_process_with_error!(1, "Failed to create file: {}", e));
     let size = file
         .write(body)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to write into file: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to write into file: {}", e));
     assert_eq!(body.len(), size);
 }
 
@@ -53,19 +53,19 @@ pub fn create_encoded(path: &PathBuf, body: &[u8]) {
 
 pub fn read_file_str(path: &PathBuf) -> String {
     let mut file =
-        fs::File::open(path).unwrap_or_else(|e| exit_process!(1, "Failed to open file: {}", e));
+        fs::File::open(path).unwrap_or_else(|e| exit_process_with_error!(1, "Failed to open file: {}", e));
     let mut text = String::new();
     file.read_to_string(&mut text)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to read file: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to read file: {}", e));
     text
 }
 
 pub fn read_file_bytes(path: &PathBuf) -> Vec<u8> {
     let mut file =
-        fs::File::open(path).unwrap_or_else(|e| exit_process!(1, "Failed to open file: {}", e));
+        fs::File::open(path).unwrap_or_else(|e| exit_process_with_error!(1, "Failed to open file: {}", e));
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer)
-        .unwrap_or_else(|e| exit_process!(1, "Failed to read file: {}", e));
+        .unwrap_or_else(|e| exit_process_with_error!(1, "Failed to read file: {}", e));
     buffer
 }
 
@@ -77,6 +77,11 @@ pub fn read_every_line(path: &PathBuf) -> Vec<String> {
 pub fn read_last_line(path: &PathBuf) -> String {
     let buffer = read_file_bytes(path);
     extract_last_line(buffer)
+}
+
+pub fn read_decoded(path: &PathBuf) -> Vec<u8> {
+    let buffer = read_file_bytes(path);
+    decompress_by_zlib(buffer.as_slice())
 }
 
 pub fn split_lines(buffer: Vec<u8>) -> Vec<String> {

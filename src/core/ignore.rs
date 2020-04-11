@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::core::io::read_lines;
+use crate::core::current_path;
 
 pub struct Ignore {
     names: Vec<String>
@@ -8,7 +9,8 @@ pub struct Ignore {
 
 impl Ignore {
     pub fn new() -> Self {
-        let path = PathBuf::from("./.aequoreaignore");
+        let mut path = current_path();
+        path.push(".aequoreaignore");
         let mut names = read_lines(&path)
             .into_iter()
             .filter(|s| !s.is_empty())

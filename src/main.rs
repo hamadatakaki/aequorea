@@ -1,7 +1,11 @@
 extern crate aequorea;
+#[allow(unused_imports)]
 use aequorea::core::current_path;
+#[allow(unused_imports)]
 use aequorea::core::index::Index;
+#[allow(unused_imports)]
 use aequorea::core::object::{Object, ObjectDebug};
+#[allow(unused_imports)]
 use aequorea::command::add::add;
 
 use std::path::Path;

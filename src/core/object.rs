@@ -1,8 +1,8 @@
 use std::fs;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crate::core::Entry;
+use crate::core::{current_path, Entry};
 use crate::core::io::{compress_by_zlib, create_file, generate_hash, read_file_bytes, read_decoded, split_lines};
 use crate::core::ignore::Ignore;
 
@@ -85,9 +85,10 @@ impl Object {
     }
 
     pub fn obj_recorded_path(hash: String) -> PathBuf {
-        let path = format!("./.aequorea/objects/{}", hash);
-        let path = Path::new(&path);
-        path.to_path_buf()
+        let mut path = current_path();
+        path.push(".aequorea/objects");
+        path.push(hash);
+        path
     }
 
     pub fn path(&self) -> PathBuf {

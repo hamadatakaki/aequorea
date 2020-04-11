@@ -8,3 +8,11 @@ macro_rules! exit_process_with_error {
         std::process::exit($code);
     }};
 }
+
+#[macro_export]
+macro_rules! exit_process {
+    ($code: expr, $message: expr) => {{
+        println!($message);
+        std::process::exit($code);
+    }};
+}

@@ -2,6 +2,7 @@ use std::fs;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::exit_process_with_error;
 use crate::core::{current_path, Entry};
 use crate::core::io::{compress_by_zlib, create_file, generate_hash, read_file_bytes, read_decoded, split_lines};
 use crate::core::ignore::Ignore;
@@ -12,6 +13,23 @@ use crate::core::ignore::Ignore;
 //     Existed,
 //     Deleted,
 // }
+
+pub enum ObjectType {
+    Blob,
+    Tree
+}
+
+impl ObjectType {
+    pub fn from_str(string: &str) -> Self {
+        if string == "tree" {
+            Self::Tree
+        } else if string == "blob" {
+            Self::Blob
+        } else {
+            exit_process_with_error!(1, "The type does not exist: {}", string);
+        }
+    }
+}
 
 #[derive(Debug)]
 pub enum Object {
@@ -60,27 +78,27 @@ impl Object {
         }
     }
 
-    pub fn from_compressed_obj(path: PathBuf, hash: String, obj_type: String) -> Self {
+    pub fn from_compressed_obj(path: PathBuf, hash: String, obj_type: ObjectType) -> Self {
         let decompressed = read_decoded(&Self::obj_recorded_path(hash).to_path_buf());
-        match obj_type.as_str() {
-            "blob" => {
+        match obj_type {
+            ObjectType::Blob => {
                 Object::Blob { path, data: decompressed.to_vec() }
             },
-            "tree" => {
+            ObjectType::Tree => {
                 let mut children: HashMap<PathBuf, Object> = HashMap::new();
                 let lines = split_lines(decompressed);
                 for line in lines {
                     let texts: Vec<String> = line.splitn(3, |c| &c == &' ').map(|s| s.to_string()).collect();
                     let child_type = texts.get(0).unwrap();
+                    let child_type = ObjectType::from_str(child_type);
                     let child_hash = texts.get(1).unwrap();
                     let child_path = texts.get(2).unwrap();
                     let child_path = path.join(child_path);
-                    let child = Object::from_compressed_obj(child_path, child_hash.to_string(), child_type.to_owned());
+                    let child = Object::from_compressed_obj(child_path, child_hash.to_string(), child_type);
                     children.insert(child.path(), child);
                 };
                 Object::Tree { path, children }
-            },
-            _ => unreachable!()
+            }
         }
     }
 

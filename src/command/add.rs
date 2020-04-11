@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use crate::core::current_path;
 use crate::core::index::Index;
-use crate::core::object::Object;
+use crate::core::object::{Object, ObjectType};
 
 use crate::exit_process_with_error;
 
@@ -30,7 +30,7 @@ pub fn add(path: PathBuf) {
     let new_obj = child;
 
     if let Some(index) = Index::new() {
-        let old_obj = Object::from_compressed_obj(current_path(), index.hash(), String::from("tree"));
+        let old_obj = Object::from_compressed_obj(current_path(), index.hash(), ObjectType::Tree);
         old_obj.write();
         index.write();
     } else {

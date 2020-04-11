@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
+use std::collections::HashMap;
 
 use crate::core::current_path;
 use crate::core::index::Index;
-use crate::core::object::{Object, ObjectStatus, ObjectDebug};
+use crate::core::object::{Object, ObjectDebug};
 
 use crate::exit_process_with_error;
 
@@ -17,10 +18,11 @@ pub fn add(path: PathBuf) {
     let mut child = obj;
     while contain_child(&current_path(), &path) {
         let parent_path = path.parent().unwrap();
+        let mut children = HashMap::new();
+        children.insert(child.path(), child);
         let parent = Object::Tree {
             path: parent_path.to_path_buf(),
-            children: vec![child],
-            status: ObjectStatus::Created,
+            children
         };
         path = parent_path.to_path_buf();
         child = parent;

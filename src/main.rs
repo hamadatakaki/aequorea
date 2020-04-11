@@ -11,7 +11,7 @@ fn main() {
     // let obj = Object::from_compressed_obj(current_path(), index.hash, String::from("tree"));
     // println!("{:?}", obj.contain_hash_list());
 
-    add(Path::new("src").to_path_buf());
+    add(Path::new(".").to_path_buf());
 
     // obj.debug_print_path();
 }

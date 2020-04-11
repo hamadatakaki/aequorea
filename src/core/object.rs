@@ -28,7 +28,6 @@ pub enum Object {
 pub trait ObjectDebug {
     fn debug_print_path(&self);
     fn debug_print_detail(&self);
-    fn debug_hash_list(&self) -> Vec<String>;
 }
 
 impl Object {
@@ -150,6 +149,21 @@ impl Object {
         generate_hash(self.compress().as_slice())
     }
 
+    pub fn all_contained_hash(&self) -> Vec<String> {
+        match self {
+            Object::Blob { path: _, data: _ } => {
+                vec![self.hash()]
+            },
+            Object::Tree { path: _, children } => {
+                let mut v = vec![self.hash()];
+                for (_, child) in children {
+                    v.extend(child.all_contained_hash());
+                };
+                v
+            }
+        }
+    }
+
     pub fn write(&self) {
         println!("<DEBUG> {:?}", self.path());
         // println!("<DEBUG> {:?}: {:?}", self.path(), self.to_show());
@@ -191,23 +205,6 @@ impl ObjectDebug for Object {
                 for (_, child) in children {
                     child.debug_print_detail();
                 }
-            }
-        }
-    }
-
-    fn debug_hash_list(&self) -> Vec<String> {
-        match self {
-            Object::Blob { path, data: _ } => {
-                println!("chl: path {:?}", path);
-                vec![self.hash()]
-            },
-            Object::Tree { path: _, children } => {
-                let mut v: Vec<String> = Vec::new();
-                for (_, child) in children {
-                    v.extend(child.debug_hash_list());
-                };
-                println!("{:?}", v);
-                v
             }
         }
     }

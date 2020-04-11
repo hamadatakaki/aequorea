@@ -28,15 +28,12 @@ pub enum Object {
 
 pub trait ObjectDebug {
     fn debug_print_path(&self);
+    fn debug_print_detail(&self);
+    fn debug_hash_list(&self) -> Vec<String>;
 }
 
 impl Object {
     pub fn from_path(path: PathBuf) -> Self {
-        let path = if path.is_relative() {
-            path.canonicalize().unwrap()
-        } else {
-            path
-        };
         match Entry::modelize_entry(&path) {
             Some(Entry::File) => {
                 let file = read_file_bytes(&path);
@@ -113,6 +110,18 @@ impl Object {
         PathBuf::from(path)
     }
 
+    pub fn push_child(&mut self, child: Object) -> Option<()> {
+        match self {
+            Object::Blob { data: _, path: _, status: _ } => {
+                None
+            },
+            Object::Tree { path: _, children, status: _ } => {
+                children.push(child);
+                Some(())
+            }
+        }
+    }
+
     pub fn data(&self) -> Vec<u8> {
         match self {
             Object::Blob { data, path: _, status: _ } => {
@@ -175,5 +184,58 @@ impl ObjectDebug for Object {
                 }
             }
         }
+    }
+
+    fn debug_print_detail(&self) {
+        match self {
+            Object::Blob { data, path, status: _ } => {
+                println!("blob: {:?}, {:?}", path, data);
+            },
+            Object::Tree { path, children, status: _ } => {
+                println!("tree: {:?}", path);
+                for child in children {
+                    child.debug_print_detail();
+                }
+            }
+        }
+    }
+
+    fn debug_hash_list(&self) -> Vec<String> {
+        match self {
+            Object::Blob { data: _, path, status: _ } => {
+                println!("chl: path {:?}", path);
+                vec![self.hash()]
+            },
+            Object::Tree { path: _, children, status: _ } => {
+                let mut v: Vec<String> = Vec::new();
+                for child in children {
+                    v.extend(child.debug_hash_list());
+                };
+                println!("{:?}", v);
+                v
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Object, ObjectStatus, ObjectDebug};
+    use std::path::PathBuf;
+
+    fn setup() -> Object {
+        let blob1 = Object::Blob { data: vec![1, 1, 1, 1], path: PathBuf::from("one"), status: ObjectStatus::Created };
+        let blob2 = Object::Blob { data: vec![2, 2, 2, 2], path: PathBuf::from("two"), status: ObjectStatus::Created };
+        let tree1 = Object::Tree { path: PathBuf::from("tree1"), children: vec![blob1, blob2], status: ObjectStatus::Created };
+        tree1
+    }
+
+    #[test]
+    fn test() {
+        let mut root = setup();
+        let blob3 = Object::Blob { data: vec![3, 3, 3, 3], path: PathBuf::from("three"), status: ObjectStatus::Created };
+        let tree2 = Object::Tree { path: PathBuf::from("tree2"), children: vec![blob3], status: ObjectStatus::Created };
+        root.push_child(tree2);
+        root.debug_print_detail();
     }
 }

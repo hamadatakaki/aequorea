@@ -2,3 +2,5 @@
 **/*.rs.bk
 
 .aequorea/
+.aequoreaignore
+workspace/

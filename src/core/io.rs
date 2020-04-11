@@ -69,7 +69,7 @@ pub fn read_file_bytes(path: &PathBuf) -> Vec<u8> {
     buffer
 }
 
-pub fn read_every_line(path: &PathBuf) -> Vec<String> {
+pub fn read_lines(path: &PathBuf) -> Vec<String> {
     let buffer = read_file_bytes(path);
     split_lines(buffer)
 }

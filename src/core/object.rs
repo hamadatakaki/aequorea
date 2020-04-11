@@ -1,8 +1,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::Entry;
-use super::io::{compress_by_zlib, create_file, generate_hash, read_file_bytes, read_decoded, split_lines};
+use crate::core::Entry;
+use crate::core::io::{compress_by_zlib, create_file, generate_hash, read_file_bytes, read_decoded, split_lines};
+use crate::core::ignore::Ignore;
 
 #[derive(Debug)]
 pub enum ObjectStatus {
@@ -47,9 +48,10 @@ impl Object {
             },
             Some(Entry::Dir) => {
                 let mut v = Vec::new();
+                let ignore = Ignore::new();
                 for entry in fs::read_dir(&path).unwrap() {
                     let entry_path = entry.unwrap().path();
-                    if Entry::exclude_entry(&entry_path) {
+                    if ignore.for_path(&entry_path) {
                         continue;
                     }
                     let obj: Object = Object::from_path(entry_path);
@@ -65,14 +67,8 @@ impl Object {
         }
     }
 
-    pub fn obj_path(hash: String) -> PathBuf {
-        let path = format!("./.aequorea/objects/{}", hash);
-        let path = Path::new(&path);
-        path.to_path_buf()
-    }
-
     pub fn from_compressed_obj(path: PathBuf, hash: String, obj_type: String) -> Self {
-        let decompressed = read_decoded(&Self::obj_path(hash).to_path_buf());
+        let decompressed = read_decoded(&Self::obj_recorded_path(hash).to_path_buf());
         match obj_type.as_str() {
             "blob" => {
                 Object::Blob { data: decompressed.to_vec(), path, status: ObjectStatus::Existed }
@@ -93,6 +89,12 @@ impl Object {
             },
             _ => unreachable!()
         }
+    }
+
+    pub fn obj_recorded_path(hash: String) -> PathBuf {
+        let path = format!("./.aequorea/objects/{}", hash);
+        let path = Path::new(&path);
+        path.to_path_buf()
     }
 
     pub fn path(&self) -> PathBuf {
@@ -145,6 +147,8 @@ impl Object {
     }
 
     pub fn write(&self) {
+        println!("<DEBUG> {:?}", self.path());
+        // println!("<DEBUG> {:?}: {:?}", self.path(), self.to_show());
         let hash = self.hash();
         match self {
             Object::Tree {path: _, children, status: _} => {
@@ -154,7 +158,7 @@ impl Object {
             },
             _ => ()
         }
-        create_file(&Self::obj_path(hash).to_path_buf(), self.compress().as_slice())
+        create_file(&Self::obj_recorded_path(hash).to_path_buf(), self.compress().as_slice())
     }
 }
 

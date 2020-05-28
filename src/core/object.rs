@@ -197,6 +197,29 @@ impl Object {
         }
         create_file(&Self::obj_recorded_path(hash).to_path_buf(), self.compress().as_slice())
     }
+
+    pub fn replace(&mut self, path: PathBuf, obj: Self) -> Result<(), String> {
+        // pathとselfのパスの属関係を確認する
+        //     /root/hogeに対し/root/foo/barをreplaceしようとしていたらErrを返す、みたいな
+        // childrenにpathがあるか確認する
+        // あれば置き換え、なければchildren内のTreeのreplaeを呼び出す
+        if &path.starts_with(self.path()) & !(self.path().starts_with(&path)) {
+            Err(String::new())
+        } else {
+            // match self {
+            //     Object::Tree { path: _, children } => {
+            //         match children.remove(&path) {
+            //             Some(_) => {
+            //                 children.insert(path, obj);
+            //             },
+            //             _ => ()
+            //         }
+            //     },
+            //     _ => ()
+            // }
+            Ok(())
+        }
+    }
 }
 
 impl ObjectDebug for Object {
@@ -236,23 +259,49 @@ mod tests {
     use std::collections::HashMap;
 
     fn setup() -> Object {
-        let blob1 = Object::Blob { data: vec![1, 1, 1, 1], path: PathBuf::from("one") };
-        let blob2 = Object::Blob { data: vec![2, 2, 2, 2], path: PathBuf::from("two") };
-        let mut children = HashMap::new();
-        children.insert(blob1.path(), blob1);
-        children.insert(blob2.path(), blob2);
-        let tree1 = Object::Tree { path: PathBuf::from("tree1"), children };
-        tree1
+        let blob1 = Object::Blob { data: vec![1, 1, 1, 1], path: PathBuf::from("/first/one") };
+        let blob2 = Object::Blob { data: vec![2, 2, 2, 2], path: PathBuf::from("/first/two") };
+        let blob3 = Object::Blob { data: vec![3, 3, 3, 3], path: PathBuf::from("/second/three") };
+        let blob4 = Object::Blob { data: vec![4, 4, 4, 4], path: PathBuf::from("/secondfour") };
+        let blob5 = Object::Blob { data: vec![5, 5, 5, 5], path: PathBuf::from("/five") };
+
+        let mut children1 = HashMap::new();
+        children1.insert(blob1.path(), blob1);
+        children1.insert(blob2.path(), blob2);
+        let mut children2 = HashMap::new();
+        children2.insert(blob3.path(), blob3);
+        children2.insert(blob4.path(), blob4);
+
+        let tree1 = Object::Tree { path: PathBuf::from("/first"), children: children1 };
+        let tree2 = Object::Tree { path: PathBuf::from("/second"), children: children2 };
+
+        let mut root = HashMap::new();
+        root.insert(tree1.path(), tree1);
+        root.insert(tree2.path(), tree2);
+        root.insert(blob5.path(), blob5);
+
+        let root = Object::Tree { path: PathBuf::from("/"), children: root };
+
+        root
     }
 
+    // #[test]
+    // fn test_insert() {
+    //     let mut root = setup();
+    //     let blob3 = Object::Blob { data: vec![3, 3, 3, 3], path: PathBuf::from("three") };
+    //     let mut children = HashMap::new();
+    //     children.insert(blob3.path(), blob3);
+    //     let tree2 = Object::Tree { path: PathBuf::from("tree2"), children };
+    //     root.insert_child(tree2);
+    //     root.debug_print_detail();
+    // }
+
     #[test]
-    fn test() {
+    fn test_replace() {
         let mut root = setup();
-        let blob3 = Object::Blob { data: vec![3, 3, 3, 3], path: PathBuf::from("three") };
-        let mut children = HashMap::new();
-        children.insert(blob3.path(), blob3);
-        let tree2 = Object::Tree { path: PathBuf::from("tree2"), children };
-        root.insert_child(tree2);
+        let new_blob3 = Object::Blob { data: vec![4, 5, 6, 7], path: PathBuf::from("/second/three") };
+        root.replace(new_blob3.path(), new_blob3).unwrap();
+
         root.debug_print_detail();
     }
 }
